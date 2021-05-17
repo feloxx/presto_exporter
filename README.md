@@ -23,3 +23,11 @@ presto_exporter/
 注意：
 
 以上4个参数都需要配置，`presto.coordinator.url` 与 `presto.worker.url` 参数互斥。
+
+启动例子：
+
+```
+./presto_exporter --web.listen-address 10.150.31.29:9088 --presto.coordinator.url 10.150.31.29 --presto.port 5797
+
+./presto_exporter --web.listen-address 10.150.31.31:9088 --presto.worker.url 10.150.31.31 --presto.port 5797
+```
