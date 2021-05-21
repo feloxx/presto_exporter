@@ -187,6 +187,7 @@ func (c *statusCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.reservedMaxBytes, prometheus.GaugeValue, float64(c.status.MemoryInfo.Pools.Reserved.MaxBytes))
 	ch <- prometheus.MustNewConstMetric(c.reservedReservedBytes, prometheus.CounterValue, float64(c.status.MemoryInfo.Pools.Reserved.ReservedBytes))
 
+	// 线程池暂时用是否有占用来替代，后续调整
 	reservedQueryMemoryReservations := 0
 	if len(c.status.MemoryInfo.Pools.Reserved.QueryMemoryReservations) != 0 {
 		reservedQueryMemoryReservations = 1
@@ -204,6 +205,7 @@ func (c *statusCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.generalMaxBytes, prometheus.GaugeValue, float64(c.status.MemoryInfo.Pools.General.MaxBytes))
 	ch <- prometheus.MustNewConstMetric(c.generalReservedBytes, prometheus.CounterValue, float64(c.status.MemoryInfo.Pools.General.ReservedBytes))
 
+	// 线程池暂时用是否有占用来替代，后续调整
 	generalQueryMemoryReservations := 0
 	if len(c.status.MemoryInfo.Pools.Reserved.QueryMemoryReservations) != 0 {
 		generalQueryMemoryReservations = 1
