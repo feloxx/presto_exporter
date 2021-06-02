@@ -9,6 +9,11 @@ import (
 )
 
 type StatusEntity struct {
+	url  string
+	Info StatusInfo
+}
+
+type StatusInfo struct {
 	Coordinator     bool        `json:"coordinator"`
 	Environment     string      `json:"environment"`
 	ExternalAddress string      `json:"externalAddress"`
@@ -48,32 +53,34 @@ type NodeVersion struct {
 	Version string `json:"version"`
 }
 
-func NewStatusEntity(prestoUrl, prestoPort string) (StatusEntity, error) {
-	var status StatusEntity
-
-	// url地址补充
-	url := fmt.Sprintf("http://%s:%s/v1/status", prestoUrl, prestoPort)
-
+func (c *StatusEntity) StatusCheck() error {
 	// get请求接口
-	resp, err := http.Get(url)
+	resp, err := http.Get(c.url)
 	if err != nil {
-		return status, errors.Wrap(err, "failed to get cluster metrics")
+		return errors.Wrap(err, "failed to get cluster metrics")
 	}
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return status, errors.Wrap(err, "failed to read cluster response body")
+		return errors.Wrap(err, "failed to read cluster response body")
 	}
 	defer resp.Body.Close()
 
 	// 判断返回码
 	if resp.StatusCode != 200 {
-		return status, fmt.Errorf("failed to get metrics: %s %d", string(data), resp.StatusCode)
+		return fmt.Errorf("failed to get metrics: %s %d", string(data), resp.StatusCode)
 	}
 
 	// 请求结果序列化为对象
-	if err := json.Unmarshal(data, &status); err != nil {
-		return status, errors.Wrapf(err, "failed to unmarshal cluster metrics output: %s", string(data))
+	if err := json.Unmarshal(data, &c.Info); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal cluster metrics output: %s", string(data))
 	}
+	return nil
+}
 
-	return status, nil
+func NewStatusEntity(prestoUrl, prestoPort string) (*StatusEntity, error) {
+	var status StatusEntity
+	// url地址补充
+	url := fmt.Sprintf("http://%s:%s/v1/status", prestoUrl, prestoPort)
+	status.url = url
+	return &status, nil
 }

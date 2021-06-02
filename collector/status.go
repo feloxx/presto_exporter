@@ -2,6 +2,7 @@ package collector
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"my/presto_exporter/entity"
 	"strconv"
 	"sync"
@@ -175,55 +176,58 @@ func (c *statusCollector) Describe(ch chan<- *prometheus.Desc) {
 // 实现Collect接口，进行数据采集
 func (c *statusCollector) Collect(ch chan<- prometheus.Metric) {
 	c.mutex.Lock()
+	if err := c.status.StatusCheck(); err != nil {
+		log.Fatal("status collect err: ", err)
+	}
 	defer c.mutex.Unlock()
 
-	uptime, _ := strconv.ParseFloat(c.status.Uptime[:len(c.status.Uptime)-1], 64)
+	uptime, _ := strconv.ParseFloat(c.status.Info.Uptime[:len(c.status.Info.Uptime)-1], 64)
 	ch <- prometheus.MustNewConstMetric(c.uptime, prometheus.GaugeValue, uptime)
 
-	totalNodeMemory, _ := strconv.ParseInt(c.status.MemoryInfo.TotalNodeMemory[:len(c.status.MemoryInfo.TotalNodeMemory)-1], 10, 64)
+	totalNodeMemory, _ := strconv.ParseInt(c.status.Info.MemoryInfo.TotalNodeMemory[:len(c.status.Info.MemoryInfo.TotalNodeMemory)-1], 10, 64)
 	ch <- prometheus.MustNewConstMetric(c.totalNodeMemory, prometheus.GaugeValue, float64(totalNodeMemory))
 
 	// reserved
-	ch <- prometheus.MustNewConstMetric(c.reservedMaxBytes, prometheus.GaugeValue, float64(c.status.MemoryInfo.Pools.Reserved.MaxBytes))
-	ch <- prometheus.MustNewConstMetric(c.reservedReservedBytes, prometheus.CounterValue, float64(c.status.MemoryInfo.Pools.Reserved.ReservedBytes))
+	ch <- prometheus.MustNewConstMetric(c.reservedMaxBytes, prometheus.GaugeValue, float64(c.status.Info.MemoryInfo.Pools.Reserved.MaxBytes))
+	ch <- prometheus.MustNewConstMetric(c.reservedReservedBytes, prometheus.CounterValue, float64(c.status.Info.MemoryInfo.Pools.Reserved.ReservedBytes))
 
 	// 线程池暂时用是否有占用来替代，后续调整
 	reservedQueryMemoryReservations := 0
-	if len(c.status.MemoryInfo.Pools.Reserved.QueryMemoryReservations) != 0 {
+	if len(c.status.Info.MemoryInfo.Pools.Reserved.QueryMemoryReservations) != 0 {
 		reservedQueryMemoryReservations = 1
 	}
 	ch <- prometheus.MustNewConstMetric(c.reservedQueryMemoryReservations, prometheus.CounterValue, float64(reservedQueryMemoryReservations))
 	reservedQueryMemoryRevocableReservations := 0
-	if len(c.status.MemoryInfo.Pools.Reserved.QueryMemoryRevocableReservations) != 0 {
+	if len(c.status.Info.MemoryInfo.Pools.Reserved.QueryMemoryRevocableReservations) != 0 {
 		reservedQueryMemoryRevocableReservations = 1
 	}
 	ch <- prometheus.MustNewConstMetric(c.reservedQueryMemoryRevocableReservations, prometheus.CounterValue, float64(reservedQueryMemoryRevocableReservations))
 
-	ch <- prometheus.MustNewConstMetric(c.reservedFreeBytes, prometheus.CounterValue, float64(c.status.MemoryInfo.Pools.Reserved.FreeBytes))
+	ch <- prometheus.MustNewConstMetric(c.reservedFreeBytes, prometheus.CounterValue, float64(c.status.Info.MemoryInfo.Pools.Reserved.FreeBytes))
 
 	// general
-	ch <- prometheus.MustNewConstMetric(c.generalMaxBytes, prometheus.GaugeValue, float64(c.status.MemoryInfo.Pools.General.MaxBytes))
-	ch <- prometheus.MustNewConstMetric(c.generalReservedBytes, prometheus.CounterValue, float64(c.status.MemoryInfo.Pools.General.ReservedBytes))
+	ch <- prometheus.MustNewConstMetric(c.generalMaxBytes, prometheus.GaugeValue, float64(c.status.Info.MemoryInfo.Pools.General.MaxBytes))
+	ch <- prometheus.MustNewConstMetric(c.generalReservedBytes, prometheus.CounterValue, float64(c.status.Info.MemoryInfo.Pools.General.ReservedBytes))
 
 	// 线程池暂时用是否有占用来替代，后续调整
 	generalQueryMemoryReservations := 0
-	if len(c.status.MemoryInfo.Pools.Reserved.QueryMemoryReservations) != 0 {
+	if len(c.status.Info.MemoryInfo.Pools.Reserved.QueryMemoryReservations) != 0 {
 		generalQueryMemoryReservations = 1
 	}
 	ch <- prometheus.MustNewConstMetric(c.generalQueryMemoryReservations, prometheus.CounterValue, float64(generalQueryMemoryReservations))
 	generalQueryMemoryRevocableReservations := 0
-	if len(c.status.MemoryInfo.Pools.Reserved.QueryMemoryRevocableReservations) != 0 {
+	if len(c.status.Info.MemoryInfo.Pools.Reserved.QueryMemoryRevocableReservations) != 0 {
 		generalQueryMemoryRevocableReservations = 1
 	}
 	ch <- prometheus.MustNewConstMetric(c.generalQueryMemoryRevocableReservations, prometheus.CounterValue, float64(generalQueryMemoryRevocableReservations))
 
-	ch <- prometheus.MustNewConstMetric(c.generalFreeBytes, prometheus.CounterValue, float64(c.status.MemoryInfo.Pools.General.FreeBytes))
+	ch <- prometheus.MustNewConstMetric(c.generalFreeBytes, prometheus.CounterValue, float64(c.status.Info.MemoryInfo.Pools.General.FreeBytes))
 
 	// other
-	ch <- prometheus.MustNewConstMetric(c.processors,prometheus.CounterValue, float64(c.status.Processors))
-	ch <- prometheus.MustNewConstMetric(c.processCpuLoad,prometheus.CounterValue, float64(c.status.ProcessCPULoad))
-	ch <- prometheus.MustNewConstMetric(c.systemCpuLoad,prometheus.CounterValue, float64(c.status.SystemCPULoad))
-	ch <- prometheus.MustNewConstMetric(c.heapUsed,prometheus.CounterValue, float64(c.status.HeapUsed))
-	ch <- prometheus.MustNewConstMetric(c.heapAvailable,prometheus.CounterValue, float64(c.status.HeapAvailable))
-	ch <- prometheus.MustNewConstMetric(c.nonHeapUsed,prometheus.CounterValue, float64(c.status.NonHeapUsed))
+	ch <- prometheus.MustNewConstMetric(c.processors,prometheus.CounterValue, float64(c.status.Info.Processors))
+	ch <- prometheus.MustNewConstMetric(c.processCpuLoad,prometheus.CounterValue, float64(c.status.Info.ProcessCPULoad))
+	ch <- prometheus.MustNewConstMetric(c.systemCpuLoad,prometheus.CounterValue, float64(c.status.Info.SystemCPULoad))
+	ch <- prometheus.MustNewConstMetric(c.heapUsed,prometheus.CounterValue, float64(c.status.Info.HeapUsed))
+	ch <- prometheus.MustNewConstMetric(c.heapAvailable,prometheus.CounterValue, float64(c.status.Info.HeapAvailable))
+	ch <- prometheus.MustNewConstMetric(c.nonHeapUsed,prometheus.CounterValue, float64(c.status.Info.NonHeapUsed))
 }

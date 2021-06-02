@@ -2,6 +2,7 @@ package collector
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"my/presto_exporter/entity"
 	"sync"
 )
@@ -91,16 +92,19 @@ func (c *clusterCollector) Describe(ch chan<- *prometheus.Desc) {
 // 实现Collect接口，进行数据采集
 func (c *clusterCollector) Collect(ch chan<- prometheus.Metric) {
 	c.mutex.Lock()
+	if err := c.cluster.ClusterCheck(); err != nil {
+		log.Fatal("cluster collect err: ", err)
+	}
 	defer c.mutex.Unlock()
 
-	ch <- prometheus.MustNewConstMetric(c.runningQueries, prometheus.GaugeValue, c.cluster.RunningQueries)
-	ch <- prometheus.MustNewConstMetric(c.blockedQueries, prometheus.GaugeValue, c.cluster.BlockedQueries)
-	ch <- prometheus.MustNewConstMetric(c.queuedQueries, prometheus.GaugeValue, c.cluster.QueuedQueries)
-	ch <- prometheus.MustNewConstMetric(c.activeWorkers, prometheus.GaugeValue, c.cluster.ActiveWorkers)
-	ch <- prometheus.MustNewConstMetric(c.runningDrivers, prometheus.GaugeValue, c.cluster.RunningDrivers)
-	ch <- prometheus.MustNewConstMetric(c.reservedMemory, prometheus.GaugeValue, c.cluster.ReservedMemory)
-	ch <- prometheus.MustNewConstMetric(c.totalInputRows, prometheus.CounterValue, c.cluster.TotalInputRows)
-	ch <- prometheus.MustNewConstMetric(c.totalInputBytes, prometheus.CounterValue, c.cluster.TotalInputBytes)
-	ch <- prometheus.MustNewConstMetric(c.totalCPUTimeSecs, prometheus.CounterValue, c.cluster.TotalCPUTimeSecs)
+	ch <- prometheus.MustNewConstMetric(c.runningQueries, prometheus.GaugeValue, c.cluster.Info.RunningQueries)
+	ch <- prometheus.MustNewConstMetric(c.blockedQueries, prometheus.GaugeValue, c.cluster.Info.BlockedQueries)
+	ch <- prometheus.MustNewConstMetric(c.queuedQueries, prometheus.GaugeValue, c.cluster.Info.QueuedQueries)
+	ch <- prometheus.MustNewConstMetric(c.activeWorkers, prometheus.GaugeValue, c.cluster.Info.ActiveWorkers)
+	ch <- prometheus.MustNewConstMetric(c.runningDrivers, prometheus.GaugeValue, c.cluster.Info.RunningDrivers)
+	ch <- prometheus.MustNewConstMetric(c.reservedMemory, prometheus.GaugeValue, c.cluster.Info.ReservedMemory)
+	ch <- prometheus.MustNewConstMetric(c.totalInputRows, prometheus.CounterValue, c.cluster.Info.TotalInputRows)
+	ch <- prometheus.MustNewConstMetric(c.totalInputBytes, prometheus.CounterValue, c.cluster.Info.TotalInputBytes)
+	ch <- prometheus.MustNewConstMetric(c.totalCPUTimeSecs, prometheus.CounterValue, c.cluster.Info.TotalCPUTimeSecs)
 }
 

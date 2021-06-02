@@ -41,7 +41,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to get presto cluster: %v", err)
 		}
-		prometheus.MustRegister(collector.NewClusterCollector(cluster))
+		prometheus.MustRegister(collector.NewClusterCollector(*cluster))
 	}
 
 	url := ""
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// 向prometheus注册collector
-	prometheus.MustRegister(collector.NewStatusCollector(status))
+	prometheus.MustRegister(collector.NewStatusCollector(*status))
 
 	// 启动一个http接口，用于prometheus拉取数据
 	http.Handle("/metrics", promhttp.Handler())
